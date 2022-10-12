@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Create a VPC with 3 subnets, Internet Gateway, and route table.
 
+# Paramters to take the values on runtime
 Parameters:
   VpcCIDR:
     Default: "10.0.0.0/16"
@@ -14,6 +15,22 @@ Parameters:
     Default: "10.0.2.0/24"
     Type: String
     Description: Please Enter the IP Address Range for Public Subnet-2
+  PublicSubnet3CIDR:
+    Default: "10.0.3.0/24"
+    Type: String
+    Description: Please Enter the IP Address Range for Public Subnet-3
+  PrivateSubnet1CIDR:
+    Default: "10.0.4.0/24"
+    Type: String
+    Description: Please Enter the IP Address Range for Private Subnet-1
+  PrivateSubnet2CIDR:
+    Default: "10.0.5.0/24"
+    Type: String
+    Description: Please Enter the IP Address Range for Private Subnet-2
+  PrivateSubnet3CIDR:
+    Default: "10.0.6.0/24"
+    Type: String
+    Description: Please Enter the IP Address Range for Private Subnet-3
 
 Resources:
 # Creating VPC
@@ -34,14 +51,40 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: InternetGateway for VPC
+          Value: InternetGatewayForVPC
 
-  #Attaching above created IGW with myVPC
+  #Attaching IGW(InternetGateway) with myVPC
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref myVPC
+
+  #creating A Public Route Table:
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Public Route Table
+      VpcId: !Ref myVPC
+
+  #creating A Private Route Table:
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Private Route Table
+      VpcId: !Ref myVPC
+
+  #creating a public route for public route table with destination CIDR block 0.0.0.0/0 and Above created IGW as target:
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
 
   #creating Public Subnet-1:
   mySubnet1:
@@ -53,36 +96,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-PublicSubnet1
-  
-  #creating Public Subnet-2:
-  mySubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref myVPC
-      CidrBlock: !Ref PublicSubnet2CIDR
-      AvailabilityZone: !Select [0, !GetAZs ""]
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-PublicSubnet2
-
-  #creating A Public Route Table:
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      Tags:
-        - Key: Name
-          Value: Public Route Table
-      VpcId: !Ref myVPC
-
-  #creating a public route to above created public route table with destination CIDR block 0.0.0.0/0 and Above created IGW as target:
-  PublicRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-      RouteTableId: !Ref PublicRouteTable
+          Value: !Sub ${AWS::StackName}-PublicSubnet1 
 
   #Attaching the public subnets-1 to the Public Route Table:
   PublicSubnet1RouteTableAssociation:
@@ -91,3 +105,97 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref mySubnet1
 
+ #creating Public Subnet-2:
+  mySubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PublicSubnet2CIDR
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicSubnet2
+
+  #Attaching the public subnets-2 to the Public Route Table:
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref mySubnet2
+
+  #creating Public Subnet-3:
+  mySubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PublicSubnet3CIDR
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicSubnet3
+
+  #Attaching the public subnets-3 to the Public Route Table:
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref mySubnet3
+
+  #creating Private Subnet-1:
+  myPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateSubnet1
+
+  #Attaching the private subnets-1 to the private Route Table:
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref myPrivateSubnet1
+
+  #creating Private Subnet-2:
+  myPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateSubnet2
+
+  #Attaching the private subnets-2 to the private Route Table:
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref myPrivateSubnet2
+
+  #creating Private Subnet-3:
+  myPrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PrivateSubnet3CIDR
+      AvailabilityZone: !Select [2, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateSubnet3
+
+  #Attaching the private subnets-3 to the private Route Table:
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref myPrivateSubnet3
