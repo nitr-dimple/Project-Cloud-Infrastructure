@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create a VPC with 3 subnets, Internet Gateway, and route table.
+
+Parameters:
+  VpcCIDR:
+    Default: "10.0.0.0/16"
+    Type: String
+    Description: Please Enter the IP Address Range for vpc
+  PublicSubnet1CIDR:
+    Default: "10.0.1.0/24"
+    Type: String
+    Description: Please Enter the IP Address Range for Public Subnet-1
+  PublicSubnet2CIDR:
+    Default: "10.0.2.0/24"
+    Type: String
+    Description: Please Enter the IP Address Range for Public Subnet-2
+
+Resources:
+# Creating VPC
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: "default"
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC
+        
+  #creating IGW
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: InternetGateway for VPC
+
+  #Attaching above created IGW with myVPC
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref myVPC
+
+  #creating Public Subnet-1:
+  mySubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PublicSubnet1CIDR
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicSubnet1
+  
+  #creating Public Subnet-2:
+  mySubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PublicSubnet2CIDR
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicSubnet2
+
+  #creating A Public Route Table:
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Public Route Table
+      VpcId: !Ref myVPC
+
+  #creating a public route to above created public route table with destination CIDR block 0.0.0.0/0 and Above created IGW as target:
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+
+  #Attaching the public subnets-1 to the Public Route Table:
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref mySubnet1
+
