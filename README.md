@@ -44,11 +44,18 @@ Create the IAM users and groups in the dev and demo accounts by following the sa
    git clone git@github.com:dimple-northeastern/infrastructure.git
    ```
 - Open aws cli and navigate to the folder you cloned.
-- For setting up network infrastructure by using default values, run the following command
+- For setting up network infrastructure by using default values, run the following command<br>
+   dev  
    ```
    aws cloudformation deploy --profile dev --template-file csye6225-infra.yml --stack-name mystack
    ```
-- For setting up network infrastructure by passing the values in parameters, run the following command
+
+   demo 
+   ```
+   aws cloudformation deploy --profile demo --template-file csye6225-infra.yml --stack-name mystack
+   ```
+- For setting up network infrastructure by passing the values in parameters, run the following command <br>
+   dev
     ```
     aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24"
    ```
@@ -56,15 +63,41 @@ Create the IAM users and groups in the dev and demo accounts by following the sa
    ```
     aws cloudformation --profile dev create-stack --stack-name mystack2 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="30.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="30.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="30.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="30.0.3.0/24"
     ```
-- In order to delete all the resources associated with the stack, run the following command
+
+    demo
+    ```
+    aws cloudformation --profile demo create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24"
+   ```
+
+   ```
+    aws cloudformation --profile demo create-stack --stack-name mystack2 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="30.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="30.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="30.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="30.0.3.0/24"
+    ```
+- In order to delete all the resources associated with the stack, run the following command <br>
+    dev
     ```
     aws cloudformation --profile dev delete-stack --stack-name mystack
     ```
-- For creating VPC network in different region, run the following command
+    demo
+    ```
+    aws cloudformation --profile demo delete-stack --stack-name mystack
+    ```
+- For creating VPC network in different region, run the following command <br>
+  dev
   ```
     aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24" --region us-east-1
   ```
-- In order to delete all the resources associated with the stack in a specified region, run the following command
+
+    demo
+  ```
+    aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24" --region us-east-1
+  ```
+- In order to delete all the resources associated with the stack in a specified region, run the following command <br>
+   dev
+   ```
+   aws cloudformation --profile dev delete-stack --stack-name mystack2 --region us-east-2
+   ```
+
+   demo
    ```
    aws cloudformation --profile dev delete-stack --stack-name mystack2 --region us-east-2
    ```
