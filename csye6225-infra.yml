@@ -51,7 +51,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: InternetGatewayForVPC
+          Value: !Sub ${AWS::StackName}-VPC-InternetGateway
 
   #Attaching IGW(InternetGateway) with myVPC
   InternetGatewayAttachment:
@@ -66,7 +66,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: Public Route Table
+          Value: !Sub ${AWS::StackName}-PublicRouteTable
       VpcId: !Ref myVPC
 
   #creating A Private Route Table:
