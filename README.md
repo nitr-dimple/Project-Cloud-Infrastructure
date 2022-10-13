@@ -94,10 +94,10 @@ Create the IAM users and groups in the dev and demo accounts by following the sa
 - In order to delete all the resources associated with the stack in a specified region, run the following command <br>
    dev
    ```
-   aws cloudformation --profile dev delete-stack --stack-name mystack2 --region us-east-2
+   aws cloudformation --profile dev delete-stack --stack-name mystack1 --region us-east-2
    ```
 
    demo
    ```
-   aws cloudformation --profile dev delete-stack --stack-name mystack2 --region us-east-2
+   aws cloudformation --profile demo delete-stack --stack-name mystack1 --region us-east-2
    ```
