@@ -19,6 +19,10 @@ Parameters:
     Default: "10.0.3.0/24"
     Type: String
     Description: Please Enter the IP Address Range for Public Subnet-3
+  ImageValue:
+    Default: ""
+    Type: String
+    Description: Please Enter the image id
   # PrivateSubnet1CIDR:
   #   Default: "10.0.4.0/24"
   #   Type: String
@@ -199,3 +203,53 @@ Resources:
   #   Properties:
   #     RouteTableId: !Ref PrivateRouteTable
   #     SubnetId: !Ref myPrivateSubnet3
+
+#EC2 Security Group
+  WebAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref myVPC
+      GroupDescription: ec2 Security group with ports
+      GroupName: application
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-ApplicationSecurityGroup
+
+
+  #EC2 Instance
+  ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageValue
+      # IamInstanceProfile: !Ref ec2InstanceProfile
+      DisableApiTermination: false
+      InstanceType: t2.micro
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: 50
+      NetworkInterfaces:
+        - SubnetId: !Ref mySubnet1
+          AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet: [!Ref WebAppSecurityGroup]
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Instance
