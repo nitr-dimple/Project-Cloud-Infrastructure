@@ -10,6 +10,8 @@ This repository contains the infrastructure for cloudformation which does follow
 - Creates Internet Gateway and attach this Internet Gateway to the Virtual Private Cloud
 - Creates public route table and attach all subnets to the route table
 - Creates public routes in the public route table with destination CIDR block as 0.0.0.0/0 and internet gateway as target.
+- Creates a security group for hosting web applications
+- Create an instance from the AMI.
 
 
 ## Initial Setup Steps:
@@ -57,20 +59,20 @@ Create the IAM users and groups in the dev and demo accounts by following the sa
 - For setting up network infrastructure by passing the values in parameters, run the following command <br>
    dev
     ```
-    aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24"
+    aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="10.1.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="10.1.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="10.1.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="10.1.3.0/24" ParameterKey=ImageValue,ParameterValue="<ami_image_name>"
    ```
 
    ```
-    aws cloudformation --profile dev create-stack --stack-name mystack2 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="30.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="30.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="30.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="30.0.3.0/24"
+    aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="10.2.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="10.2.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="10.2.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="10.2.3.0/24" ParameterKey=ImageValue,ParameterValue="<ami_image_name>"
     ```
 
     demo
     ```
-    aws cloudformation --profile demo create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24"
+    aws cloudformation --profile demo create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="10.1.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="10.1.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="10.1.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="10.1.3.0/24" ParameterKey=ImageValue,ParameterValue="<ami_image_name>"
    ```
 
    ```
-    aws cloudformation --profile demo create-stack --stack-name mystack2 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="30.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="30.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="30.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="30.0.3.0/24"
+    aws cloudformation --profile demo create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="10.2.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="10.2.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="10.2.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="10.2.3.0/24" ParameterKey=ImageValue,ParameterValue="<ami_image_name>"
     ```
 - In order to delete all the resources associated with the stack, run the following command <br>
     dev
@@ -84,12 +86,12 @@ Create the IAM users and groups in the dev and demo accounts by following the sa
 - For creating VPC network in different region, run the following command <br>
   dev
   ```
-    aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24" --region us-east-1
+    aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="10.1.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="10.1.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="10.1.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="10.1.3.0/24" ParameterKey=ImageValue,ParameterValue="<ami_image_name>" --region us-east-2
   ```
 
     demo
   ```
-    aws cloudformation --profile dev create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="20.0.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="20.0.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="20.0.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="20.0.3.0/24" --region us-east-1
+    aws cloudformation --profile demo create-stack --stack-name mystack1 --template-body file://csye6225-infra.yml --parameter ParameterKey=VpcCIDR,ParameterValue="10.1.0.0/16" ParameterKey=PublicSubnet1CIDR,ParameterValue="10.1.1.0/24" ParameterKey=PublicSubnet2CIDR,ParameterValue="10.1.2.0/24" ParameterKey=PublicSubnet3CIDR,ParameterValue="10.1.3.0/24" ParameterKey=ImageValue,ParameterValue="<ami_image_name>" --region us-east-2
   ```
 - In order to delete all the resources associated with the stack in a specified region, run the following command <br>
    dev
