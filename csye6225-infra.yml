@@ -483,12 +483,12 @@ Resources:
           #! /bin/bash
           sudo chmod -R 777 /etc/environment
           sudo chown ec2-user:ec2-user /etc/environment
-          sudo echo 'DB_HOSTNAME=${DatabaseInstance.Endpoint.Address}' >> /etc/environment
+          sudo echo 'AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /etc/environment
           sudo echo 'DB_USER=${DatabaseUser}' >> /etc/environment
           sudo echo 'PASSWORD=${DatabasePassword}' >> /etc/environment
-          sudo echo 'AWS_BUCKET_NAME=${S3Bucket}' >> /etc/environment
+          sudo echo 'AWS_SBUCKET=${S3Bucket}' >> /etc/environment
           sudo echo 'DB_NAME=${DatabaseName}' >> /etc/environment
           sudo echo 'AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /etc/environment
-          sudo echo 'AWS_SECRET_ACCESS_KEY=${AwsSecretKey}' >> /etc/environment
-          sudo echo 'AWS_BUCKET_REGION=${S3BucketRegion}' >> /etc/environment
+          sudo echo 'AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /etc/environment
+          sudo echo 'AWS_REGION=${S3BucketRegion}' >> /etc/environment
           sleep 50
