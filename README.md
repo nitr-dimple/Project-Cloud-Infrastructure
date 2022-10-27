@@ -103,3 +103,15 @@ Create the IAM users and groups in the dev and demo accounts by following the sa
    ```
    aws cloudformation --profile demo delete-stack --stack-name mystack1 --region us-east-2
    ```
+
+
+ - To delete all the objects from the bucket
+   dev
+  ```
+  aws --profile dev s3 rm s3://81fd18f0.dimplepatels3bucket --recursive
+  ``` 
+
+  demo
+  ```
+  aws --profile demo s3 rm s3://81fd18f0.dimplepatels3bucket --recursive
+  ```
