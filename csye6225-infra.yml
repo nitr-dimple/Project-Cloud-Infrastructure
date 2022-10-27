@@ -481,14 +481,26 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #! /bin/bash
-          sudo chmod -R 777 /etc/environment
-          sudo chown ec2-user:ec2-user /etc/environment
-          sudo echo 'AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /etc/environment
-          sudo echo 'DB_USER=${DatabaseUser}' >> /etc/environment
-          sudo echo 'PASSWORD=${DatabasePassword}' >> /etc/environment
-          sudo echo 'AWS_SBUCKET=${S3Bucket}' >> /etc/environment
-          sudo echo 'DB_NAME=${DatabaseName}' >> /etc/environment
-          sudo echo 'AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /etc/environment
-          sudo echo 'AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /etc/environment
-          sudo echo 'AWS_REGION=${S3BucketRegion}' >> /etc/environment
+          sudo chmod R 777 /etc/environment
+          sudo touch /usr/share/tomcat9/bin/setenv.sh
+          sudo chmod -R 777 /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export DB_USER=${DatabaseUser}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export PASSWORD=${DatabasePassword}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export AWS_SBUCKET=${S3Bucket}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export DB_NAME=${DatabaseName}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo systemctl restart tomcat9.service
+        
+
+          # sudo echo 'AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /etc/environment
+          # sudo echo 'DB_USER=${DatabaseUser}' >> /etc/environment
+          # sudo echo 'PASSWORD=${DatabasePassword}' >> /etc/environment
+          # sudo echo 'AWS_SBUCKET=${S3Bucket}' >> /etc/environment
+          # sudo echo 'DB_NAME=${DatabaseName}' >> /etc/environment
+          # sudo echo 'AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /etc/environment
+          # sudo echo 'AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /etc/environment
+          # sudo echo 'AWS_REGION=${S3BucketRegion}' >> /etc/environment
           sleep 50
