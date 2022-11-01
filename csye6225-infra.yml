@@ -99,6 +99,14 @@ Parameters:
     Default: "us-east-1"
     Type: String
     Description: Please Enter the Access key
+  DomainName:
+    Description: domain Name for S3 Bucket Naming
+    Type: String
+    Default: "dev.dimplepatel.me"
+  hostedZoneID:
+    Description: Hosted Zone Id of your domain
+    Type: String
+    Default: "Z00196961VMJH54DMEKX6"
 
 Resources:
 # Creating VPC
@@ -504,3 +512,14 @@ Resources:
           # sudo echo 'AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /etc/environment
           # sudo echo 'AWS_REGION=${S3BucketRegion}' >> /etc/environment
           sleep 50
+
+# Creating record for domain name
+  DnsRecordSet:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      Name: !Ref DomainName
+      Type: A
+      TTL: 60
+      HostedZoneId: !Ref hostedZoneID
+      ResourceRecords:
+      - !GetAtt ec2Instance.PublicIp
