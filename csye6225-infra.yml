@@ -501,6 +501,7 @@ Resources:
           sudo echo 'export AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo systemctl restart tomcat9.service
+          sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080
         
 
           # sudo echo 'AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /etc/environment
