@@ -502,7 +502,24 @@ Resources:
           sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo systemctl restart tomcat9.service
           sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080
-        
+          sudo touch /etc/systemd/system/iptable.service
+          sudo chmod R 777 /etc/systemd/system/iptable.service
+          sudo cat << EOF > /etc/systemd/system/iptable.service
+          [Unit]
+          Description=Iptables Setup
+          
+          [Service]
+          Restart=always
+          RestartSec=30
+          ExecStart= /bin/bash -c 'sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080'
+          User=root
+          
+          [Install]
+          WantedBy=multi-user.target 
+          EOF
+          sudo systemctl daemon-reload
+          sudo systemctl enable iptable.service
+          sudo systemctl start iptable.service
 
           # sudo echo 'AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /etc/environment
           # sudo echo 'DB_USER=${DatabaseUser}' >> /etc/environment
