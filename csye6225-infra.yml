@@ -455,6 +455,7 @@ Resources:
       RoleName: EC2-CSYE6225
       ManagedPolicyArns:
         - !Ref WebAppS3
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
 
   #creating a instance profile:
   ec2InstanceProfile:
@@ -489,7 +490,6 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #! /bin/bash
-          sudo chmod R 777 /etc/environment
           sudo touch /usr/share/tomcat9/bin/setenv.sh
           sudo chmod -R 777 /usr/share/tomcat9/bin/setenv.sh
           sudo echo 'export AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /usr/share/tomcat9/bin/setenv.sh
@@ -501,34 +501,28 @@ Resources:
           sudo echo 'export AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo systemctl restart tomcat9.service
-          sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080
-          sudo touch /etc/systemd/system/iptable.service
-          sudo chmod R 777 /etc/systemd/system/iptable.service
-          sudo cat << EOF > /etc/systemd/system/iptable.service
-          [Unit]
-          Description=Iptables Setup
+          sudo systemctl restart iptable.service
+          sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/amazon-cloudwatch-agent.json -s
           
-          [Service]
-          Restart=always
-          RestartSec=30
-          ExecStart= /bin/bash -c 'sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080'
-          User=root
+          # sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080
+          # sudo touch /etc/systemd/system/iptable.service
+          # sudo chmod R 777 /etc/systemd/system/iptable.service
+          # sudo cat << EOF > /etc/systemd/system/iptable.service
+          # [Unit]
+          # Description=Iptables Setup
           
-          [Install]
-          WantedBy=multi-user.target 
-          EOF
-          sudo systemctl daemon-reload
-          sudo systemctl enable iptable.service
-          sudo systemctl start iptable.service
-
-          # sudo echo 'AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /etc/environment
-          # sudo echo 'DB_USER=${DatabaseUser}' >> /etc/environment
-          # sudo echo 'PASSWORD=${DatabasePassword}' >> /etc/environment
-          # sudo echo 'AWS_SBUCKET=${S3Bucket}' >> /etc/environment
-          # sudo echo 'DB_NAME=${DatabaseName}' >> /etc/environment
-          # sudo echo 'AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /etc/environment
-          # sudo echo 'AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /etc/environment
-          # sudo echo 'AWS_REGION=${S3BucketRegion}' >> /etc/environment
+          # [Service]
+          # Restart=always
+          # RestartSec=30
+          # ExecStart= /bin/bash -c 'sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080'
+          # User=root
+          
+          # [Install]
+          # WantedBy=multi-user.target 
+          # EOF
+          # sudo systemctl daemon-reload
+          # sudo systemctl enable iptable.service
+          # sudo systemctl start iptable.service
           sleep 50
 
 # Creating record for domain name
