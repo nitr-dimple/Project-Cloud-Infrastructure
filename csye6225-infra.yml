@@ -505,10 +505,9 @@ Resources:
           sudo echo 'export AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo echo 'export AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'exprot EMAIL_TOPIC_ARN=arn:aws:sns:${AWS::Region}:${AWS::AccountId}:email' >> /usr/share/tomcat9/bin/setenv.sh
+          sudo echo 'export EMAIL_TOPIC_ARN=arn:aws:sns:${AWS::Region}:${AWS::AccountId}:email' >> /usr/share/tomcat9/bin/setenv.sh
           sudo echo 'export DOMAIN_NAME=${DomainName}' >> /usr/share/tomcat9/bin/setenv.sh
           sudo echo 'export SENDGRID_KEY=${sendGridKey}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo systemctl stop tomcat9.service
           sudo systemctl restart tomcat9.service
           sudo systemctl restart iptable.service
           sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/amazon-cloudwatch-agent.json -s
@@ -614,8 +613,7 @@ Resources:
               - "ses:VerifyEmailAddress"
               - "ses:SendEmail"
               - "ses:SendRawEmail"
-            Resource: "*"
-            # Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
+            Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
           - Sid: LambdaS3Access
             Effect: Allow
             Action:
