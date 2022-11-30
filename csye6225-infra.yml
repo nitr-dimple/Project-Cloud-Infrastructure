@@ -109,6 +109,12 @@ Parameters:
     Default: "Z00196961VMJH54DMEKX6"
   sendGridKey:
     Type: String
+  KeyPair:
+    Description: Amazon EC2 Key Pair
+    Type: "AWS::EC2::KeyPair::KeyName"
+  SSLcertificateArn:
+    Description: SSL Certificate Arn
+    Type: String
 
 
 Resources:
@@ -294,15 +300,16 @@ Resources:
         - IpProtocol: tcp
           FromPort: 8080
           ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          CidrIp: 0.0.0.0/0
-          FromPort: 443
-          ToPort: 443
-        - IpProtocol: tcp
-          CidrIp: 0.0.0.0/0
-          FromPort: 80
-          ToPort: 80
+          SourceSecurityGroupId: !Ref loadbalancerSecurityGroup
+          # CidrIp: 0.0.0.0/0  
+        # - IpProtocol: tcp
+        #   CidrIp: 0.0.0.0/0
+        #   FromPort: 443
+        #   ToPort: 443
+        # - IpProtocol: tcp
+        #   CidrIp: 0.0.0.0/0
+        #   FromPort: 80
+        #   ToPort: 80
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-ApplicationSecurityGroup
@@ -378,6 +385,8 @@ Resources:
     Properties:
       Family: mysql8.0
       Description: Custom Database Parameter Group
+      # Parameters:
+      #   rds.force_ssl: 1
 
   # Creating Database Subnet Group
   DatabaseSubnetGroup:
@@ -405,6 +414,7 @@ Resources:
       Engine: mysql
       EngineVersion: 8.0
       StorageEncrypted: true
+      KmsKeyId: !Ref rdsKey
       MasterUsername: !Ref DatabaseUser
       MasterUserPassword: !Ref DatabasePassword
       MultiAZ: false
@@ -471,48 +481,6 @@ Resources:
       Roles:
         - !Ref EC2CSYE6225
 
-  #EC2 Instance
-  ec2Instance:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId: !Ref ImageValue
-      IamInstanceProfile: !Ref ec2InstanceProfile
-      DisableApiTermination: false
-      InstanceType: t2.micro
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeType: gp2
-            VolumeSize: 50
-      NetworkInterfaces:
-        - SubnetId: !Ref mySubnet1
-          AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          GroupSet: [!Ref WebAppSecurityGroup]
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-Instance
-      UserData:
-        Fn::Base64: !Sub |
-          #! /bin/bash
-          sudo touch /usr/share/tomcat9/bin/setenv.sh
-          sudo chmod -R 777 /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export DB_USER=${DatabaseUser}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export PASSWORD=${DatabasePassword}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export AWS_SBUCKET=${S3Bucket}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export DB_NAME=${DatabaseName}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export EMAIL_TOPIC_ARN=arn:aws:sns:${AWS::Region}:${AWS::AccountId}:email' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export DOMAIN_NAME=${DomainName}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo echo 'export SENDGRID_KEY=${sendGridKey}' >> /usr/share/tomcat9/bin/setenv.sh
-          sudo systemctl restart tomcat9.service
-          sudo systemctl restart iptable.service
-          sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/amazon-cloudwatch-agent.json -s
-          
-          sleep 50
 
 # Creating record for domain name
   DnsRecordSet:
@@ -520,10 +488,18 @@ Resources:
     Properties:
       Name: !Ref DomainName
       Type: A
-      TTL: 60
+      # TTL: 60
       HostedZoneId: !Ref hostedZoneID
-      ResourceRecords:
-      - !GetAtt ec2Instance.PublicIp
+      # ResourceRecords:
+      # - !GetAtt ec2Instance.PublicIp
+      AliasTarget:
+        DNSName: !GetAtt
+          - loadBalancer
+          - DNSName
+        EvaluateTargetHealth: false
+        HostedZoneId: !GetAtt
+          - loadBalancer
+          - CanonicalHostedZoneID
 
   #creating sns topic:
   topicId:
@@ -548,7 +524,6 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - dynamodb:DescribeTable
               - dynamodb:GetItem
               - dynamodb:Query
               - dynamodb:Scan
@@ -557,10 +532,6 @@ Resources:
               - dynamodb:UpdateItem
               - dynamodb:UpdateTable
               - dynamodb:PutItem
-              - dynamodb:DescribeStream
-              - dynamodb:List*
-              - dynamodb:DescribeReservedCapacity*
-              - dynamodb:DescribeLimits
               - dynamodb:DescribeTimeToLive
             Resource:
               - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/UserTokenTable"
@@ -602,9 +573,6 @@ Resources:
             Effect: Allow
             Action:
               - "dynamodb:GetItem"
-              - "dynamodb:PutItem"
-              - "dynamodb:UpdateItem"
-              - "dynamodb:Scan"
             Resource:
               - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/ExistingEmailTable"
           - Sid: LambdaSESAccess
@@ -693,3 +661,377 @@ Resources:
               - "sns:Publish"
               - "sns:CreateTopic"
             Resource: !Ref topicId
+
+  #EC2 Instance
+  # ec2Instance:
+  #   Type: AWS::EC2::Instance
+  #   Properties:
+  #     ImageId: !Ref ImageValue
+  #     IamInstanceProfile: !Ref ec2InstanceProfile
+  #     DisableApiTermination: false
+  #     InstanceType: t2.micro
+  #     BlockDeviceMappings:
+  #       - DeviceName: /dev/xvda
+  #         Ebs:
+  #           VolumeType: gp2
+  #           VolumeSize: 50
+  #     NetworkInterfaces:
+  #       - SubnetId: !Ref mySubnet1
+  #         AssociatePublicIpAddress: true
+  #         DeviceIndex: 0
+  #         GroupSet: [!Ref WebAppSecurityGroup]
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub ${AWS::StackName}-Instance
+  #     UserData:
+  #       Fn::Base64: !Sub |
+  #         #! /bin/bash
+  #         sudo touch /usr/share/tomcat9/bin/setenv.sh
+  #         sudo chmod -R 777 /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export DB_USER=${DatabaseUser}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export PASSWORD=${DatabasePassword}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export AWS_SBUCKET=${S3Bucket}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export DB_NAME=${DatabaseName}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export EMAIL_TOPIC_ARN=arn:aws:sns:${AWS::Region}:${AWS::AccountId}:email' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export DOMAIN_NAME=${DomainName}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo echo 'export SENDGRID_KEY=${sendGridKey}' >> /usr/share/tomcat9/bin/setenv.sh
+  #         sudo systemctl restart tomcat9.service
+  #         sudo systemctl restart iptable.service
+  #         sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/amazon-cloudwatch-agent.json -s
+          
+  #         sleep 50
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: asg_launch_config
+      LaunchTemplateData:
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            Groups:
+              - !Ref WebAppSecurityGroup
+            DeleteOnTermination: true
+        Placement:
+          Tenancy: default
+        IamInstanceProfile:
+          Arn: !GetAtt
+            - ec2InstanceProfile
+            - Arn
+        BlockDeviceMappings:
+          - Ebs:
+              VolumeSize: 20
+              VolumeType: gp2
+              DeleteOnTermination: true
+              Encrypted: true
+              KmsKeyId: !Ref KeyForEbs
+            DeviceName: /dev/xvda
+        ImageId: !Ref ImageValue
+        InstanceType: t3.micro
+        KeyName: !Ref KeyPair
+        UserData:
+          Fn::Base64: !Sub |
+            #! /bin/bash
+            sudo touch /usr/share/tomcat9/bin/setenv.sh
+            sudo chmod -R 777 /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export AWS_DATABASE=${DatabaseInstance.Endpoint.Address}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export DB_USER=${DatabaseUser}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export PASSWORD=${DatabasePassword}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export AWS_SBUCKET=${S3Bucket}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export DB_NAME=${DatabaseName}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export AWS_ACCESS_KEY_ID=${AwsAccessKey}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export AWS_SECRET_KEY_ID=${AwsSecretKey}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export AWS_REGION=${S3BucketRegion}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export EMAIL_TOPIC_ARN=arn:aws:sns:${AWS::Region}:${AWS::AccountId}:email' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export DOMAIN_NAME=${DomainName}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo echo 'export SENDGRID_KEY=${sendGridKey}' >> /usr/share/tomcat9/bin/setenv.sh
+            # sudo echo 'export CODEDEPLOY_BUCKET_DEMO=codedeploy.${DomainName}' >> /usr/share/tomcat9/bin/setenv.sh
+            sudo systemctl restart tomcat9.service
+            sudo systemctl restart iptable.service
+            sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/amazon-cloudwatch-agent.json -s
+            
+            sleep 50
+
+ #creating autoscaling group:
+  AutoScalingGroup:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AutoScalingGroupName: !Sub "${AWS::StackName}-asg"
+      AvailabilityZones:
+        - us-east-1a
+        - us-east-1b
+        - us-east-1c
+      Cooldown: "60"
+      DesiredCapacity: "1"
+      HealthCheckGracePeriod: 90
+      HealthCheckType: EC2
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MaxSize: "3"
+      MinSize: "1"
+      MetricsCollection:
+        - Granularity: 1Minute
+          Metrics:
+            - GroupInServiceInstances
+            - GroupPendingInstances
+            - GroupStandbyInstances
+            - GroupTerminatingInstances
+            - GroupTotalInstances
+      TerminationPolicies:
+        - OldestInstance
+        - Default
+      Tags:
+        - Key: Application
+          Value: WebApp
+          PropagateAtLaunch: true
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-asg"
+          PropagateAtLaunch: true
+      TargetGroupARNs:
+        - !Ref loadBalancerTargetGroup
+      VPCZoneIdentifier:
+        - !Ref mySubnet1
+        - !Ref mySubnet2
+        - !Ref mySubnet3
+
+  #creating Load Balancer security group:
+  loadbalancerSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupName: load balancer 
+      GroupDescription: Security Group for web application load balancer
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: 0.0.0.0/0
+
+  #creating target group for load balancing:
+  loadBalancerTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      HealthCheckIntervalSeconds: 90
+      HealthCheckPath: "/"
+      HealthCheckPort: "8080"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 60
+      HealthyThresholdCount: 2
+      IpAddressType: ipv4
+      Name: !Sub "${AWS::StackName}-lb-tg"
+      Port: 8080
+      Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-lb-tg"
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      TargetType: instance
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref myVPC
+
+  #creating listners for redirecting the traffic to backend port that is application port it can be anything, the client facing port will be 80
+  loadBalancerListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref SSLcertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref loadBalancerTargetGroup
+      LoadBalancerArn: !Ref loadBalancer
+      Port: 443
+      Protocol: HTTPS
+
+  #creating load balancer for distributing the load across multiple instances:
+  loadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: !Sub ${AWS::StackName}-load-balancer
+      Type: application
+      IpAddressType: ipv4
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref loadbalancerSecurityGroup
+      Subnets:
+        - !Ref mySubnet1
+        - !Ref mySubnet2
+        - !Ref mySubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-load-balancer
+
+  #Autoscaling scale up policy:
+  ApplicationServerScaleUpPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: "60"
+      ScalingAdjustment: "1"
+
+  #Autoscaling scale down policy:
+  ApplicationServerScaleDownPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: "60"
+      ScalingAdjustment: "-1"
+
+  #CPU utilization for above policy to trigger for Scaling up:
+  CpuUtilisationForScaleUp:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: Scale-up if CPU > 5% for 2 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: "60"
+      EvaluationPeriods: "2"
+      Threshold: "5"
+      AlarmActions:
+        - !Ref ApplicationServerScaleUpPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AutoScalingGroup
+      ComparisonOperator: GreaterThanThreshold
+
+  #CPU utilization for above policy to trigger for Scaling down:
+  CpuUtilisationForScaleDown:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: Scale-down if CPU < 3% for 2 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: "60"
+      EvaluationPeriods: "2"
+      Threshold: "3"
+      AlarmActions:
+        - !Ref ApplicationServerScaleDownPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref AutoScalingGroup
+      ComparisonOperator: LessThanThreshold
+
+  # KMS RDS encryption key
+  rdsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: An example symmetric KMS key
+      PendingWindowInDays: 10
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-rds
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Join
+                - ""
+                - - "arn:aws:iam::"
+                  - !Ref "AWS::AccountId"
+                  - ":root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: Enable RDS Service Role Permissions
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "*"
+
+  #creating alias for rds key:
+  rdsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/rdsKMSKey
+      TargetKeyId: !Ref rdsKey
+
+#KMS key and its policy:
+  KeyForEbs:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: KMS for EBS encryption attached to launch configuration
+      PendingWindowInDays: 10
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: "Allow administration of the key"
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: "Allow use of the key by AutoScaling and ghaction"
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub >-
+                  arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
+            Action:
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:TagResource"
+              - "kms:UntagResource"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: "*"
+          - Sid: "Allow use of the key by AutoScaling, ghaction and admin"
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub >-
+                  arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "*"
+          - Sid: "Allow attachment of persistent resources by AutoScaling"
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub >-
+                  arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
+            Action:
+              - "kms:CreateGrant"
+              - "kms:ListGrants"
+              - "kms:RevokeGrant"
+            Resource: "*"
+            Condition:
+              Bool:
+                "kms:GrantIsForAWSResource": "true"
+  ebsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/KeyForEbs
+      TargetKeyId: !Ref KeyForEbs
