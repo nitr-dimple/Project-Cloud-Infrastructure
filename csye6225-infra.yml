@@ -981,7 +981,7 @@ Resources:
                 - !Sub "arn:aws:iam::${AWS::AccountId}:root"
             Action: "kms:*"
             Resource: "*"
-          - Sid: "Allow use of the key by AutoScaling and ghaction"
+          - Sid: "Allow use of the key by AutoScaling"
             Effect: Allow
             Principal:
               AWS:
@@ -1003,7 +1003,7 @@ Resources:
               - "kms:ScheduleKeyDeletion"
               - "kms:CancelKeyDeletion"
             Resource: "*"
-          - Sid: "Allow use of the key by AutoScaling, ghaction and admin"
+          - Sid: "Allow use of the key by AutoScaling and admin"
             Effect: Allow
             Principal:
               AWS:
