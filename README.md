@@ -115,3 +115,8 @@ Create the IAM users and groups in the dev and demo accounts by following the sa
   ```
   aws --profile demo s3 rm s3://81fd18f0.dimplepatels3bucket --recursive
   ```
+
+# Command to Import SSL Certificate to AWS Certificate Manager:
+Go to root of your system and there paste all the required files such as certificate, private key and ca bundle and then from there run below command:
+
+aws  --profile demo acm import-certificate --certificate fileb://certificate.crt --certificate-chain fileb://ca-bundle.crt --private-key fileb://private.key
