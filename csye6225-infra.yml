@@ -965,7 +965,7 @@ Resources:
       AliasName: alias/rdsKMSKey
       TargetKeyId: !Ref rdsKey
 
-#KMS key and its policy:
+  #KMS key and its policy:
   KeyForEbs:
     Type: "AWS::KMS::Key"
     Properties:
