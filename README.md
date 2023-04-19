@@ -1,7 +1,5 @@
 # infrastructure
 
-Name: Dimpleben Kanjibhai Patel <br>
-NUID: 002965372
 <br>
 
 This repository contains the infrastructure for cloudformation which does following infrastructure setup:
